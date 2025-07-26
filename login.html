@@ -2,61 +2,292 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>تسجيل الدخول</title>
+  <title>إدارة العملاء</title>
   <style>
     body {
       font-family: 'Cairo', sans-serif;
       direction: rtl;
-      text-align: center;
-      background-color: #f0f0f0;
-      padding: 50px;
+      background: #f5f5f5;
+      padding: 20px;
     }
-    .login-container {
-      background: white;
-      max-width: 400px;
-      margin: auto;
-      padding: 30px;
-      border-radius: 20px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.2);
-    }
-    input[type="password"] {
-      width: 90%;
-      padding: 10px;
-      margin: 10px 0;
-      font-size: 18px;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 18px;
-      background-color: #27ae60;
-      color: white;
-      border: none;
+    .group {
+      background: #fff;
+      padding: 15px;
+      margin-bottom: 20px;
       border-radius: 10px;
+      box-shadow: 0 2px 4px #ccc;
+    }
+    .group h3 {
+      margin-top: 0;
+    }
+    .person {
+      border-top: 1px solid #ccc;
+      padding-top: 10px;
+      margin-top: 10px;
+    }
+    .months {
+      margin-top: 10px;
+    }
+    .months button {
+      margin: 2px;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 5px;
       cursor: pointer;
     }
-    .error {
-      color: red;
-      margin-top: 10px;
+    .paid {
+      background-color: #4caf50;
+      color: white;
+    }
+    .unpaid {
+      background-color: #ddd;
+    }
+    input, button {
+      padding: 7px;
+      margin: 5px 0;
+    }
+    #searchInput {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 15px;
     }
   </style>
 </head>
 <body>
-  <div class="login-container">
-    <h2>ادخل كلمة السر</h2>
-    <input type="password" id="passwordInput" placeholder="كلمة السر">
-    <button onclick="checkPassword()">دخول</button>
-    <div id="errorMsg" class="error"></div>
-  </div>
+
+  <input type="text" id="searchInput" placeholder="ابحث عن شخص بالاسم...">
+
+  <button onclick="addGroup()">إضافة مجموعة جديدة</button>
+
+  <div id="groupsContainer"></div>
 
   <script>
-    function checkPassword() {
-      const input = document.getElementById("passwordInput").value;
-      if (input === "1997") {
-        window.location.href = "index.html";
-      } else {
-        document.getElementById("errorMsg").textContent = "كلمة السر غير صحيحة!";
+    let groups = JSON.parse(localStorage.getItem("groups")) || [];
+
+    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+
+    function saveGroups() {
+      localStorage.setItem("groups", JSON.stringify(groups));
+    }
+
+    function createMonthButtons(person, mIndex, personDiv) {
+      const monthsDiv = document.createElement('div');
+      monthsDiv.classList.add('months');
+
+      months.forEach((month, index) => {
+        const btn = document.createElement('button');
+        btn.textContent = month;
+        btn.className = person.paidMonths.includes(index) ? 'paid' : 'unpaid';
+
+        btn.onclick = () => {
+          const monthIdx = person.paidMonths.indexOf(index);
+          if (monthIdx > -1) {
+            person.paidMonths.splice(monthIdx, 1);
+          } else {
+            person.paidMonths.push(index);
+          }
+          saveGroups();
+          renderGroups(); // re-render
+        };
+
+        monthsDiv.appendChild(btn);
+      });
+
+      personDiv.appendChild(monthsDiv);
+    }
+
+    function renderGroups() {
+      const container = document.getElementById("groupsContainer");
+      container.innerHTML = "";
+
+      const searchValue = document.getElementById("searchInput").value.trim();
+
+      groups.forEach((group, gIndex) => {
+        const groupDiv = document.createElement("div");
+        groupDiv.className = "group";
+
+        const title = document.createElement("h3");
+        title.textContent = `📁 ${group.name}`;
+        groupDiv.appendChild(title);
+
+        const addBtn = document.createElement("button");
+        addBtn.textContent = "➕ إضافة شخص";
+        addBtn.onclick = () => addPerson(gIndex);
+        groupDiv.appendChild(addBtn);
+
+        group.people.forEach((person, pIndex) => {
+          if (!person.name.includes(searchValue)) return;
+
+          const personDiv = document.createElement("div");
+          personDiv.className = "person";
+
+          personDiv.innerHTML = `
+            <strong>👤 الاسم:</strong> ${person.name}<br>
+            <strong>📞 رقم:</strong> <a href="tel:${person.phone}">${person.phone}</a><br>
+            <strong>📶 جيجات:</strong> ${person.gigas} جيجا<br>
+            <strong>📱 دقايق:</strong> ${person.minutes} دقيقة<br>
+            <strong>💰 المبلغ:</strong> ${person.amount} جنيه
+          `;
+
+          createMonthButtons(person, pIndex, personDiv);
+
+          groupDiv.appendChild(personDiv);
+        });
+
+        container.appendChild(groupDiv);
+      });
+    }
+
+    function addGroup() {
+      const groupName = prompt("اسم المجموعة:");
+      if (groupName) {
+        groups.push({ name: groupName, people: [] });
+        saveGroups();
+        renderGroups();
       }
     }
+
+    function addPerson(groupIndex) {
+      const name = prompt("اسم الشخص:");
+      const phone = prompt("رقم التليفون:");
+      const gigas = prompt("عدد الجيجات:");
+      const minutes = prompt("عدد الدقايق:");
+      const amount = prompt("المبلغ:");
+
+      if (name && phone && gigas && minutes && amount) {
+        const newPerson = {
+          name,
+          phone,
+          gigas,
+          minutes,
+          amount,
+          paidMonths: []
+        };
+        groups[groupIndex].people.push(newPerson);
+        saveGroups();
+        renderGroups();
+      }
+    }
+
+    document.getElementById("searchInput").addEventListener("input", renderGroups);
+
+    // ⏺️ بيانات أولية (اختياري – تقدر تمسحهم وتضيف غيرهم)
+    if (groups.length === 0) {
+      groups =   [
+  {
+    name: "أبو فارس 01204932458",
+    people: [
+      { name: "إسلام الليثي", phone: "01102632895", gigas: 35, minutes: 1500, amount: 300, paidMonths: [] },
+      { name: "مصطفى الليثى", phone: "01121324907", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "سامح الليثي", phone: "01102632896", gigas: 30, minutes: 1500, amount: 300, paidMonths: [] },
+      { name: "أحمد جمعه", phone: "0157593611", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "أخو أحمد جمعه", phone: "01144529401", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "عماد حمدي نسيب أحمد جمعه", phone: "01149991624", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "أحمد عبد الفتاح", phone: "01552290266", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] }
+    ]
+  },
+  {
+    name: "أبو ياسين 01281320894", 
+    people: [
+      { name: "محمود احمد درویش", phone: "01119170258", gigas: 30, minutes: 1500, amount: 300, paidMonths: [] },
+      { name: "محمد جابر نصر", phone: "01127151215", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "حسن تبع اسلام", phone: "01117496710", gigas: 35, minutes: 1500, amount: 340, paidMonths: [] },
+      { name: "حموده القط", phone: "01151457766", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "جمال جابر", phone: "01115253734", gigas: 25, minutes: 2000, amount: 300, paidMonths: [] },
+      { name: "أحمد عادل الجزار", phone: "01142729728", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "منصور زوج ندى", phone: "01123713251", gigas: 30, minutes: 2000, amount: 300, paidMonths: [] }
+    ]
+  },
+  {
+    name: "أم ادم 01282360532",
+    people: [
+      { name: "عرفة مشهور", phone: "01140345190", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "أحمد خالد سلطان", phone: "01150398041", gigas: 35, minutes: 1500, amount: 340, paidMonths: [] },
+      { name: "أحمد قرني تبع اسلام الليثي", phone: "01146865717", gigas: 30, minutes: 1500, amount: 300, paidMonths: [] },
+      { name: "أبو سيف عمار تبع اسلام الليثي", phone: "01141739519", gigas: 35, minutes: 1500, amount: 340, paidMonths: [] },
+      { name: "حسن محمود", phone: "01553981029", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "محمود عبد الستار تبع اسلام الليثي", phone: "01121325520", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "محمد حسین تبع اسلام الليثي", phone: "01113605285", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] }
+    ]
+  },
+   {
+    name: "أبو فاطمة 01226791209",
+    people: [
+      { name: "محمود جابر", phone: "01225191421", gigas: 30, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "زوجة محمود جابر", phone: "01282996602", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "زوج أخت محمود جابر", phone: "01143386741", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "أخت محمود جابر", phone: "01285844543", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "أحمد تبع هادی جابر", phone: "01112148509", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "أحمد بدران تبع اسلام الليثي", phone: "01145825318", gigas: 40, minutes: 1500, amount: 380, paidMonths: [] },
+      { name: "تبع محمود عبدالله", phone: "01146557132", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] }
+    ]
+  },
+  {
+    name: "أبو محمد خالد 01222513217",
+    people: [
+      { name: "محمود جيكا", phone: "01149558702", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "الشيخ شعبان", phone: "01141393478", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "عبدو سنترال اهناسيا", phone: "01127141194", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "أبو فريدة تبع اسلام الليثي", phone: "01101496828", gigas: 40, minutes: 1500, amount: 380, paidMonths: [] },
+      { name: "الشيخ بسام", phone: "01146281518", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "أخو أحمد فرع", phone: "01126812275", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "تبع عرفه مشهور", phone: "01144967985", gigas: 20, minutes: 1500, amount: 220, paidMonths: [] }
+    ]
+  },
+  {
+    name: "الحاجه 01282385048",
+    people: [
+      { name: "علاء علي قطب", phone: "01155754565", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "تبع ناصر بني بخيت", phone: "01152646862", gigas: 30, minutes: 1500, amount: 300, paidMonths: [] },
+      { name: "تبع محمود عبدالله", phone: "01114075817", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "تبع عبدو سنترال", phone: "01156232200", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "محمد رمضان تبع اسلام الليثي", phone: "01141876179", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "رجب محمد", phone: "01141149182", gigas: 14, minutes: 1500, amount: 200, paidMonths: [] },
+      { name: "عبد الرحمن تبعد", phone: "01153752531", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "اسلام المحمدی تبع هادي", phone: "01140277971", gigas: 35, minutes: 1500, amount: 340, paidMonths: [] }
+    ]
+  },
+  {
+    name: "د كريم رمضان 01225191337",
+    people: [
+      { name: "محمد جمیل تبع هادی", phone: "01150708741", gigas: 30, minutes: 1500, amount: 300, paidMonths: [] },
+      { name: "زياد بيتك تبع هادي", phone: "01144849012", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "البيت اسلام الليثي", phone: "01104918548", gigas: 20, minutes: 1500, amount: 220, paidMonths: [] },
+      { name: "البيت مصطفى الليثي", phone: "01144253033", gigas: 20, minutes: 1500, amount: 220, paidMonths: [] },
+      { name: "تبع حسن تبع اسلام الليثي", phone: "01122947502", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "أبو ادم رمضان", phone: "01151857373", gigas: 30, minutes: 1500, amount: 300, paidMonths: [] },
+      { name: "أم كريم مرات رمضان", phone: "01142731090", gigas: 30, minutes: 1500, amount: 300, paidMonths: [] }
+    ]
+  },
+  {
+    name: " 01277328346أبو ادم",
+    people: [
+      { name: "حمدي العريض", phone: "01148740065", gigas: 30, minutes: 1500, amount: 300, paidMonths: [] },
+      { name: "تبع حمدي العريض", phone: "01104187258", gigas: 30, minutes: 1500, amount: 300, paidMonths: [] },
+      { name: "أيمن اسامه تبع اسلام الليثي", phone: "01100480712", gigas: 30, minutes: 1500, amount: 300, paidMonths: [] },
+      { name: "تبع الشيخ بسام", phone: "01125531742", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "خطيبة سامح الليثي", phone: "01114220574", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "كريم ربيع نقاش شاويش", phone: "01289637377", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "احمد سعد علي", phone: "01124504911", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] }
+    ]
+  },
+  {
+    name: " 01211934713 ابو محمود بدوي",
+    people: [
+      { name: "تبع ابو فريده اسلام الليثي", phone: "01120737674", gigas: 20, minutes: 1500, amount: 220, paidMonths: [] },
+      { name: "الحزين تبع اسلام الليثي", phone: "01007820519", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "ابو شروق تبع اسلام الليثي", phone: "01118870875", gigas: 35, minutes: 1500, amount: 340, paidMonths: [] },
+      { name: "ولید محجوبه", phone: "01142520529", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "محمد سيد تبع الشيخ بسام", phone: "01123199045", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "احمد الحصان تبع الشيخ بسام", phone: "01124754900", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] },
+      { name: "محمود عبد الله", phone: "01551079141", gigas: 25, minutes: 1500, amount: 260, paidMonths: [] }
+    ]}];
+      saveGroups();
+    }
+
+    renderGroups();
   </script>
+
 </body>
 </html>
