@@ -129,7 +129,17 @@
             <strong>📱 دقايق:</strong> ${person.minutes} دقيقة<br>
             <strong>💰 المبلغ:</strong> ${person.amount} جنيه
           `;
+       const editBtn = document.createElement("button");
+      editBtn.textContent = "✏️ تعديل";
+      editBtn.onclick = () => editPerson(gIndex, pIndex);
 
+      const deleteBtn = document.createElement("button");
+      deleteBtn.textContent = "🗑️ حذف";
+      deleteBtn.onclick = () => deletePerson(gIndex, pIndex);
+
+      personDiv.appendChild(document.createElement("br"));
+      personDiv.appendChild(editBtn);
+      personDiv.appendChild(deleteBtn);
           createMonthButtons(person, pIndex, personDiv);
 
           groupDiv.appendChild(personDiv);
@@ -285,7 +295,33 @@
     ]}];
       saveGroups();
     }
+function editPerson(groupIndex, personIndex) {
+    const person = groups[groupIndex].people[personIndex];
 
+    const newName = prompt("اسم الشخص:", person.name);
+    const newPhone = prompt("رقم التليفون:", person.phone);
+    const newGigas = prompt("عدد الجيجات:", person.gigas);
+    const newMinutes = prompt("عدد الدقايق:", person.minutes);
+    const newAmount = prompt("المبلغ:", person.amount);
+
+    if (newName && newPhone && newGigas && newMinutes && newAmount) {
+      person.name = newName;
+      person.phone = newPhone;
+      person.gigas = newGigas;
+      person.minutes = newMinutes;
+      person.amount = newAmount;
+
+      saveGroups();
+      renderGroups();
+    }
+  }
+function deletePerson(groupIndex, personIndex) {
+  if (confirm("هل أنت متأكد أنك تريد حذف هذا الشخص؟")) {
+    groups[groupIndex].people.splice(personIndex, 1); // حذف الشخص
+    saveGroups();
+    renderGroups();
+  }
+}
     renderGroups();
   </script>
 
